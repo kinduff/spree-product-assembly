@@ -1,85 +1,82 @@
 #= require ./translations
 
-$(document).ready ->
-  Spree.routes.available_admin_product_parts = (productSlug) ->
-    Spree.pathFor("admin/products/" + productSlug + "/parts/available")
+Spree.routes.available_admin_product_parts = (productSlug) ->
+  Spree.pathFor("admin/products/" + productSlug + "/parts/available")
 
-  showErrorMessages = (xhr) ->
-    response = JSON.parse(xhr.responseText)
-    show_flash("error", response)
+showErrorMessages = (xhr) ->
+  response = JSON.parse(xhr.responseText)
+  show_flash("error", response)
 
-  partsTable = $("#product_parts")
-  searchResults = $("#search_hits")
+searchForParts = ->
+  productSlug = $("#product_parts").data("product-slug")
+  searchUrl = Spree.routes.available_admin_product_parts(productSlug)
 
-  searchForParts = ->
-    productSlug = partsTable.data("product-slug")
-    searchUrl = Spree.routes.available_admin_product_parts(productSlug)
+  $.ajax
+   data:
+     q: $("#searchtext").val()
+   dataType: 'html'
+   success: (request) ->
+     $("#search_hits").html(request)
+     $("#search_hits").show()
+     $('select.select2').select2()
+   type: 'POST'
+   url: searchUrl
 
-    $.ajax
-     data:
-       q: $("#searchtext").val()
-     dataType: 'html'
-     success: (request) ->
-       searchResults.html(request)
-       searchResults.show()
-       $('select.select2').select2()
-     type: 'POST'
-     url: searchUrl
-
-  $("#searchtext").keypress (e) ->
-    if (e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)
-      searchForParts()
-      false
-    else
-      true
-
-  $("#search_parts_button").click (e) ->
-    e.preventDefault()
+$(document).on 'keypress', "#searchtext", (e) ->
+  if (e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)
     searchForParts()
-
-  makePostRequest = (link, post_params = {}) ->
-    spinner = $("img.spinner", link.parent())
-    spinner.show()
-
-    request = $.ajax
-      type: "POST"
-      url: link.attr("href")
-      data: post_params
-      dateType: "script"
-    request.fail showErrorMessages
-    request.always -> spinner.hide()
-
     false
+  else
+    true
 
-  searchResults.on "click", "a.add_product_part_link", (event) ->
-    event.preventDefault()
+$(document).on 'click', "#search_parts_button", (e) ->
+  e.preventDefault()
+  searchForParts()
 
-    part = {}
-    link = $(this)
-    row = $("#" + link.data("target"))
-    loadingIndicator = $("img.spinner", link.parent())
-    quantityField = $('input:last', row)
+makePostRequest = (link, post_params = {}) ->
+  spinner = $("img.spinner", link.parent())
+  spinner.show()
 
-    part.count = quantityField.val()
+  request = $.ajax
+    type: "POST"
+    url: link.attr("href")
+    data: post_params
+    dateType: "script"
+  request.fail showErrorMessages
+  request.always -> spinner.hide()
 
-    if row.hasClass("with-variants")
-      selectedVariantOption = $('select.part_selector option:selected', row)
-      part.part_id = selectedVariantOption.val()
+  false
 
-      if selectedVariantOption.text() == Spree.translations.user_selectable
-        part.variant_selection_deferred = "t"
-        part.part_id = link.data("master-variant-id")
+$(document).on "click", "#search_hits a.add_product_part_link", (event) ->
+  event.preventDefault()
 
-    else
-      part.part_id = $('input[name="part[id]"]', row).val()
+  part = {}
+  link = $(this)
+  row = $("#" + link.data("target"))
+  loadingIndicator = $("img.spinner", link.parent())
+  quantityField = $('input:last', row)
 
-    part.assembly_id = $('[name="part[assembly_id]"]', row).val()
+  part.count = quantityField.val()
 
-    makePostRequest(link, {assemblies_part: part})
+  if row.hasClass("with-variants")
+    selectedVariantOption = $('select.part_selector option:selected', row)
+    part.part_id = selectedVariantOption.val()
 
-  partsTable.on "click", "a.set_count_admin_product_part_link", ->
-    params = { count: $("input", $(this).parent().parent()).val() }
-    makePostRequest($(this), params)
+    if selectedVariantOption.text() == Spree.translations.user_selectable
+      part.variant_selection_deferred = "t"
+      part.part_id = link.data("master-variant-id")
 
-  partsTable.on "click", "a.remove_admin_product_part_link", ->
-    makePostRequest($(this))
+  else
+    part.part_id = $('input[name="part[id]"]', row).val()
+
+  part.assembly_id = $('[name="part[assembly_id]"]', row).val()
+
+  makePostRequest(link, {assemblies_part: part})
+
+$(document).on "click", "#product_parts a.set_count_admin_product_part_link", ->
+  params = { count: $("input", $(this).parent().parent()).val() }
+  makePostRequest($(this), params)
+
+$(document).on "click", "#product_parts a.remove_admin_product_part_link", ->
+  console.log('baby')
+  makePostRequest($(this))
