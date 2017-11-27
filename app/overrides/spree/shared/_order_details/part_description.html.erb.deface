@@ -9,7 +9,6 @@
       <% unless pli_variant.is_master? %>
         (<%= pli_variant.options_text %>)
       <% end %>
-      (<%= pli_variant.sku %>)
     </li>
     <% end %>
   </ul>
